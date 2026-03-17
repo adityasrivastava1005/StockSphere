@@ -11,7 +11,7 @@ The system is lightweight, dependency-free, and designed for easy deployment and
 ## Architecture
 
 ```
-stocksphere/
+StockSphere/
 ├── frontend/              # Client (runs in browser)
 │   ├── index.html         # App shell, all pages
 │   ├── css/
