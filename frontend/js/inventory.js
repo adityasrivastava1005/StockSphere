@@ -299,6 +299,38 @@ const inventory = {
     </tr>`).join('');
   },
 
+  async renderTransactions() {
+    const search = document.getElementById('tx-search')?.value || '';
+    let url = '/api/transactions';
+    if (search) url += `?search=${encodeURIComponent(search)}`;
+
+    const res = await api.get(url);
+    if (!res.ok) { handleApiError(res); return; }
+
+    const txns = res.data;
+    const tbody = document.getElementById('transactions-tbody');
+    if (!tbody) return;
+
+    if (!txns.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty" style="padding:32px">No transaction records found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = txns.map(t => {
+      const isIn = t.txn_type === 'INWARD';
+      return `<tr>
+        <td class="td-mono">${txnId(t.id)}</td>
+        <td class="td-bold">${t.product_name}</td>
+        <td><span class="badge ${isIn ? 'badge-green' : 'badge-amber'}">${t.txn_type}</span></td>
+        <td class="${isIn ? 'color-green' : 'color-red'} fw-600">${isIn ? '+' : '-'}${t.quantity} ${t.unit}</td>
+        <td>${t.party}</td>
+        <td>${t.reason || '—'}</td>
+        <td>${t.txn_date}</td>
+        <td class="td-muted">${t.username}</td>
+      </tr>`;
+    }).join('');
+  },
+
   async openOutward() {
     const res = await api.get('/api/products');
     if (!res.ok) { toast('Could not load products.', 'error'); return; }

@@ -141,6 +141,7 @@ const nav = {
       products:  () => inventory.renderProducts(),
       inward:    () => inventory.renderInward(),
       outward:   () => inventory.renderOutward(),
+      transactions: () => inventory.renderTransactions(),
       alerts:    () => inventory.renderAlerts(),
       reports:   () => reports.render(),
       audit:     () => reports.renderAudit(),

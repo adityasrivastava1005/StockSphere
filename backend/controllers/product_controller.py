@@ -65,10 +65,25 @@ def create(body, user):
         return 400, {'error': 'Stock and unit price cannot be negative.'}
 
     conn = get_conn()
-    exists = conn.execute('SELECT id FROM products WHERE sku=?', (sku,)).fetchone()
-    if exists:
+    exists = conn.execute('SELECT id, is_active FROM products WHERE sku=?', (sku,)).fetchone()
+    exists_is_active = bool(int(exists['is_active'])) if exists and exists['is_active'] is not None else False
+
+    if exists and exists_is_active:
         conn.close()
         return 409, {'error': 'SKU already exists.'}
+
+    if exists and not exists_is_active:
+        conn.execute(
+            """UPDATE products
+               SET name=?, category=?, unit=?, current_stock=?, reorder_level=?, unit_price=?,
+                   opening_stock=?, total_in=0, total_out=0, supplier=?, is_active=1
+               WHERE id=?""",
+            (name, category, unit, current_stock, reorder_level, unit_price, current_stock, supplier, exists['id']),
+        )
+        _audit(conn, 'PRODUCT_ADD', name, f'Product {sku} reactivated, stock: {current_stock}', user)
+        conn.commit()
+        conn.close()
+        return 201, {'id': exists['id'], 'message': 'Product reactivated successfully.'}
 
     cur = conn.execute(
         """INSERT INTO products(
