@@ -45,7 +45,7 @@ stocksphere/
 
 ```bash
 cd stocksphere/backend
-python3 server.py
+python server.py
 ```
 
 Then open: **http://localhost:8000**
