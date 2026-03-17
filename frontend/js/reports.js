@@ -111,7 +111,8 @@ const reports = {
     };
     document.getElementById('users-grid').innerHTML = users.map(u => {
       const [bg, fg] = roleColors[u.role] || ['#F1EFE8','#2C2C2A'];
-      const isMe = u.id === auth.user?.id;
+      const myId = auth.user?.id ?? auth.user?.user_id;
+      const isMe = u.id === myId;
       const canToggle = !isMe;
       const canDelete = !isMe && u.role !== 'admin';
       return `<div class="user-card" style="${!u.is_active?'opacity:0.5':''}">

@@ -7,7 +7,10 @@ const auth = {
     if (!api._token) return false;
     const res = await api.get('/api/auth/me');
     if (!res.ok) { api.setToken(null); return false; }
-    this.user = res.data;
+    this.user = {
+      ...res.data,
+      id: res.data?.id ?? res.data?.user_id,
+    };
     return true;
   },
 
@@ -135,7 +138,33 @@ const auth = {
 };
 
 // ── AUTH SCREEN ───────────────────────────────────────────────────────
+function resetAuthForms() {
+  const ids = ['login-username', 'login-password', 'reg-name', 'reg-username', 'reg-password'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  hideErr('login-err');
+  hideErr('reg-err');
+
+  document.querySelectorAll('#auth-screen input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+  });
+
+  ['login-password', 'reg-password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.type = 'password';
+  });
+
+  const role = document.getElementById('reg-role');
+  if (role) role.value = 'staff';
+
+  switchAuthTab('login');
+}
+
 function showAuthScreen() {
+  resetAuthForms();
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app-screen').style.display = 'none';
 }
