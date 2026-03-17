@@ -38,7 +38,7 @@ const inventory = {
       const isCrit = p.current_stock < p.reorder_level / 2;
       const actions = canEdit ? `
         <button class="action-btn" onclick="inventory.openEditProduct(${p.id})">Edit</button>
-        <button class="action-btn danger" onclick="inventory.deleteProduct(${p.id},'${p.name}')">Remove</button>
+        <button class="action-btn danger" onclick="inventory.deleteProduct(${p.id})">Remove</button>
       ` : '—';
       return `<tr>
         <td class="td-mono">${p.sku}</td>
@@ -154,19 +154,23 @@ const inventory = {
     this.renderProducts();
   },
 
-  deleteProduct(id, name) {
+  deleteProduct(id) {
+    const product = this._products.find(x => x.id === id);
+    const name = product?.name || 'this product';
     modal.open(`
       <div class="modal">
         <div class="modal-title">Remove product</div>
         <p style="margin-bottom:18px;color:var(--text2)">Remove <strong>${name}</strong> from the catalogue? This cannot be undone.</p>
         <div class="modal-footer">
           <button class="btn" onclick="modal.close()">Cancel</button>
-          <button class="btn btn-danger" onclick="inventory._confirmDeleteProduct(${id},'${name.replace(/'/g,"\\'")}')">Remove</button>
+          <button class="btn btn-danger" onclick="inventory._confirmDeleteProduct(${id})">Remove</button>
         </div>
       </div>`);
   },
 
-  async _confirmDeleteProduct(id, name) {
+  async _confirmDeleteProduct(id) {
+    const product = this._products.find(x => x.id === id);
+    const name = product?.name || 'Product';
     modal.close();
     const res = await api.delete(`/api/products/${id}`);
     if (!res.ok) { toast(res.data.error || 'Remove failed.', 'error'); return; }

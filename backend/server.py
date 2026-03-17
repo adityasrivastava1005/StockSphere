@@ -26,7 +26,8 @@ PORT = 8000
 
 class StockSphereHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        print(f"  {self.address_string()} {format % args}")
+        client_ip = self.client_address[0] if self.client_address else 'unknown'
+        print(f"  {client_ip} {format % args}")
 
     def _get_token(self):
         auth = self.headers.get('Authorization', '')

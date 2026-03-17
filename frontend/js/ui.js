@@ -1,7 +1,16 @@
 // ui.js — shared utilities: API, toast, modal, navigation, helpers
-const API_BASE = (window.location.origin === 'http://localhost:8000')
-  ? ''
-  : 'http://localhost:8000';
+const isBackendSameOrigin =
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+  window.location.port === '8000';
+
+const API_BASE_CANDIDATES = (() => {
+  if (isBackendSameOrigin) return [''];
+  const candidates = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+  ];
+  return [...new Set(candidates)];
+})();
 
 // ── API CLIENT ────────────────────────────────────────────────────────
 const api = {
@@ -42,6 +51,18 @@ const api = {
     this._cache.clear();
   },
 
+  async _fetchWithFallback(path, opts) {
+    let lastErr = null;
+    for (const base of API_BASE_CANDIDATES) {
+      try {
+        return await fetch(base + path, opts);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('Network error');
+  },
+
   async _req(method, path, body) {
     const cached = this._getCached(method, path);
     if (cached) return cached;
@@ -53,7 +74,7 @@ const api = {
     if (this._token) opts.headers['Authorization'] = `Bearer ${this._token}`;
     if (body) opts.body = JSON.stringify(body);
     try {
-      const res = await fetch(API_BASE + path, opts);
+      const res = await this._fetchWithFallback(path, opts);
       const data = await res.json();
       const result = { ok: res.ok, status: res.status, data };
       this._setCached(method, path, result);
