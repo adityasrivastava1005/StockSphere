@@ -4,7 +4,7 @@ Advanced Waterfall Model project
 
 Ensuring a structured flow from requirements to deployment with clear phase validation.
 
-It uses a modular full-stack architecture with a browser-based frontend and a Python backend, along with SQLite for data storage and RBAC for secure access control.
+It uses a modular full-stack architecture with a browser-based frontend and a Python backend, along with SQLite for data storage and role-based access control (RBAC) for secure access control.
 
 The system is lightweight, dependency-free, and designed for easy deployment and maintainability.
 
