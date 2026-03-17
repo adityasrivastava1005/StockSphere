@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StockSphere — Inventory Management</title>
-<link rel="stylesheet" href="css/main.css">
-<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/main.css?v=20260318">
+<link rel="stylesheet" href="css/components.css?v=20260318">
 </head>
 <body>
 
@@ -91,6 +91,13 @@
   <!-- Topbar -->
   <header id="topbar">
     <div class="topbar-left">
+      <button id="sidebar-toggle-btn" class="bell-btn" onclick="toggleSidebar()" title="Collapse sidebar" aria-label="Collapse sidebar" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
       <div class="topbar-logo">
         <div class="topbar-logo-mark"></div>
         StockSphere

@@ -318,5 +318,5 @@ hr { border: none; border-top: 1px solid var(--border); }
 @media (max-width: 860px) {
   .metrics-row { grid-template-columns: 1fr 1fr; }
   .two-col, .three-col, .user-grid { grid-template-columns: 1fr; }
-  #sidebar { display: none; }
+  #sidebar { display: flex; }
 }

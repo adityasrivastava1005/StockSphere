@@ -160,6 +160,32 @@ function setupTopbar() {
 function setupSidebar() {
   const adminOnly = document.querySelectorAll('.nav-admin-only');
   adminOnly.forEach(el => el.classList.toggle('hidden', !auth.isAdmin()));
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const label = item.textContent.replace(/\s+/g, ' ').trim();
+    if (label) item.title = label;
+  });
+  toggleSidebar(localStorage.getItem('ss_sidebar_collapsed') === '1');
+}
+
+function toggleSidebar(forceCollapsed) {
+  const appScreen = document.getElementById('app-screen');
+  if (!appScreen) return;
+
+  const shouldCollapse =
+    typeof forceCollapsed === 'boolean'
+      ? forceCollapsed
+      : !appScreen.classList.contains('sidebar-collapsed');
+
+  appScreen.classList.toggle('sidebar-collapsed', shouldCollapse);
+  localStorage.setItem('ss_sidebar_collapsed', shouldCollapse ? '1' : '0');
+
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (btn) {
+    const label = shouldCollapse ? 'Expand sidebar' : 'Collapse sidebar';
+    btn.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+  }
 }
 
 // ── TAB TOGGLE ────────────────────────────────────────────────────────
