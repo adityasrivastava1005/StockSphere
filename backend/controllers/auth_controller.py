@@ -1,5 +1,5 @@
 from db import get_conn, hash_password
-from middleware.auth import create_session, destroy_session
+from middleware.auth import create_session_in_conn, destroy_session
 
 VALID_ROLES = {'admin', 'manager', 'staff', 'finance'}
 
@@ -40,7 +40,7 @@ def login(body):
         'username': row['username'],
         'role': row['role'],
     }
-    token = create_session(row['id'])
+    token = create_session_in_conn(conn, row['id'])
     _audit(conn, 'USER_LOGIN', row['username'], f"User {row['username']} signed in", user)
     conn.commit()
     conn.close()
@@ -72,7 +72,7 @@ def register(body):
     )
     user_id = cur.lastrowid
     user = {'id': user_id, 'name': name, 'username': username, 'role': role}
-    token = create_session(user_id)
+    token = create_session_in_conn(conn, user_id)
     _audit(conn, 'USER_REGISTER', username, f"User {username} created with role {role}", user)
     conn.commit()
     conn.close()

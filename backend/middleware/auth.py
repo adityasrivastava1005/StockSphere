@@ -13,11 +13,20 @@ def create_session(user_id):
     token = generate_token()
     expires_at = (datetime.now() + timedelta(hours=8)).isoformat()
     conn = get_conn()
+    try:
+        create_session_in_conn(conn, user_id, token=token, expires_at=expires_at)
+        conn.commit()
+    finally:
+        conn.close()
+    return token
+
+
+def create_session_in_conn(conn, user_id, token=None, expires_at=None):
+    token = token or generate_token()
+    expires_at = expires_at or (datetime.now() + timedelta(hours=8)).isoformat()
     conn.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
     conn.execute("INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)",
                  (token, user_id, expires_at))
-    conn.commit()
-    conn.close()
     return token
 
 def verify_token(token):
