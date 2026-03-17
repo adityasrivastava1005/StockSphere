@@ -128,7 +128,9 @@ class StockSphereHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip('/')
-        self._handle_delete_api(path)
+        qs = parse_qs(parsed.query)
+        params = {k: v[0] for k, v in qs.items()}
+        self._handle_delete_api(path, params)
 
     def _handle_get_api(self, path, params):
         # Auth
@@ -276,7 +278,7 @@ class StockSphereHandler(BaseHTTPRequestHandler):
 
         self._json(404, {'error': 'API endpoint not found.'})
 
-    def _handle_delete_api(self, path):
+    def _handle_delete_api(self, path, params=None):
         m = re.match(r'^/api/products/(\d+)$', path)
         if m:
             user = self._require_role('staff')
@@ -298,7 +300,7 @@ class StockSphereHandler(BaseHTTPRequestHandler):
         if path == '/api/transactions':
             user = self._require_role('admin')
             if user:
-                status, data = txns_clear_all(user)
+                status, data = txns_clear_all(user, (params or {}).get('type'))
                 self._json(status, data)
             return
 

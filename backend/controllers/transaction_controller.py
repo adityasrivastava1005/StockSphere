@@ -165,10 +165,22 @@ def record_outward(body, user):
     return 201, {'id': cur.lastrowid, 'new_stock': new_stock, 'alert': alert}
 
 
-def clear_all(user):
+def clear_all(user, txn_type=None):
+    txn_type = (txn_type or '').strip().upper()
+    if txn_type and txn_type not in {'INWARD', 'OUTWARD'}:
+        return 400, {'error': 'Invalid transaction type.'}
+
     conn = get_conn()
-    conn.execute('DELETE FROM transactions')
-    _audit(conn, 'TXN_CLEAR', 'transactions', 'All transaction history cleared', user)
+    if txn_type:
+        conn.execute('DELETE FROM transactions WHERE txn_type=?', (txn_type,))
+        label = 'inward' if txn_type == 'INWARD' else 'outward'
+        _audit(conn, 'TXN_CLEAR', 'transactions', f'All {label} transaction history cleared', user)
+        message = f'All {label} transaction history cleared.'
+    else:
+        conn.execute('DELETE FROM transactions')
+        _audit(conn, 'TXN_CLEAR', 'transactions', 'All transaction history cleared', user)
+        message = 'All transaction history cleared.'
+
     conn.commit()
     conn.close()
-    return 200, {'message': 'All transaction history cleared.'}
+    return 200, {'message': message}

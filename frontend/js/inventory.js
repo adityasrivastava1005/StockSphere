@@ -178,26 +178,30 @@ const inventory = {
     this.renderProducts();
   },
 
-  clearTransactions() {
+  clearTransactions(txnType) {
+    const isInward = txnType === 'INWARD';
+    const title = isInward ? 'Clear inward history' : 'Clear outward history';
+    const scopeText = isInward ? 'all inward transaction records' : 'all outward transaction records';
     modal.open(`
       <div class="modal">
-        <div class="modal-title">Clear transaction history</div>
-        <p style="margin-bottom:18px;color:var(--text2)">This will permanently delete <strong>all</strong> inward and outward transaction records. Product stock levels will be kept as-is. This cannot be undone.</p>
+        <div class="modal-title">${title}</div>
+        <p style="margin-bottom:18px;color:var(--text2)">This will permanently delete <strong>${scopeText}</strong>. Product stock levels will be kept as-is. This cannot be undone.</p>
         <div class="modal-footer">
           <button class="btn" onclick="modal.close()">Cancel</button>
-          <button class="btn btn-danger" onclick="inventory._confirmClearTransactions()">Clear all history</button>
+          <button class="btn btn-danger" onclick="inventory._confirmClearTransactions('${txnType}')">Clear history</button>
         </div>
       </div>`);
   },
 
-  async _confirmClearTransactions() {
+  async _confirmClearTransactions(txnType) {
     modal.close();
-    const res = await api.delete('/api/transactions');
+    const res = await api.delete(`/api/transactions?type=${encodeURIComponent(txnType)}`);
     if (!res.ok) { toast(res.data.error || 'Clear failed.', 'error'); return; }
-    toast('All transaction history cleared.', 'info');
+    toast(res.data.message || 'Transaction history cleared.', 'info');
     api._invalidateCache();
-    this.renderInward();
-    this.renderOutward();
+    if (txnType === 'INWARD') this.renderInward();
+    if (txnType === 'OUTWARD') this.renderOutward();
+    this.renderTransactions();
   },
 
   // ── INWARD ────────────────────────────────────────────────────────

@@ -328,7 +328,7 @@
         <div class="page-header">
           <div><div class="page-title">Stock Inward</div><div class="page-sub">Record incoming stock</div></div>
           <div class="page-actions">
-            <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="inventory.clearTransactions()">Clear history</button>
+            <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="inventory.clearTransactions('INWARD')">Clear history</button>
             <button class="btn btn-primary" onclick="inventory.openInward()">+ Record inward</button>
           </div>
         </div>
@@ -352,7 +352,7 @@
         <div class="page-header">
           <div><div class="page-title">Stock Outward</div><div class="page-sub">Record stock dispatch</div></div>
           <div class="page-actions">
-            <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="inventory.clearTransactions()">Clear history</button>
+            <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="inventory.clearTransactions('OUTWARD')">Clear history</button>
             <button class="btn btn-primary" onclick="inventory.openOutward()">+ Record outward</button>
           </div>
         </div>
