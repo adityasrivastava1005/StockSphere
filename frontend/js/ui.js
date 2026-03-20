@@ -151,6 +151,57 @@ const nav = {
   },
 };
 
+// ── THEME ─────────────────────────────────────────────────────────────
+const theme = {
+  storageKey: 'ss_theme',
+  current: 'light',
+
+  init() {
+    const saved = localStorage.getItem(this.storageKey);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initial = (saved === 'dark' || saved === 'light') ? saved : (prefersDark ? 'dark' : 'light');
+    this.apply(initial, false);
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    media.addEventListener('change', e => {
+      if (localStorage.getItem(this.storageKey)) return;
+      this.apply(e.matches ? 'dark' : 'light', false);
+    });
+  },
+
+  apply(nextTheme, persist = true) {
+    this.current = nextTheme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', this.current);
+    if (persist) {
+      localStorage.setItem(this.storageKey, this.current);
+    }
+    this.syncToggleButtons();
+  },
+
+  toggle() {
+    this.apply(this.current === 'dark' ? 'light' : 'dark');
+  },
+
+  syncToggleButtons() {
+    const nextTheme = this.current === 'dark' ? 'light' : 'dark';
+    const modeText = nextTheme === 'dark' ? 'Dark mode' : 'Light mode';
+    const icon = nextTheme === 'dark' ? '🌙' : '☀️';
+
+    document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+      btn.title = `Switch to ${modeText.toLowerCase()}`;
+      btn.setAttribute('aria-label', `Switch to ${modeText.toLowerCase()}`);
+    });
+
+    document.querySelectorAll('[data-theme-toggle-label]').forEach(el => {
+      el.textContent = modeText;
+    });
+
+    document.querySelectorAll('[data-theme-toggle-icon]').forEach(el => {
+      el.textContent = icon;
+    });
+  },
+};
+
 // ── HELPERS ───────────────────────────────────────────────────────────
 function fmtMoney(n) {
   n = parseFloat(n) || 0;

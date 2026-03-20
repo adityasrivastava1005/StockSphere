@@ -28,6 +28,12 @@
     </div>
 
     <div class="auth-card">
+      <div class="auth-card-head">
+        <button class="btn btn-sm theme-toggle-btn" data-theme-toggle onclick="theme.toggle()" type="button">
+          <span data-theme-toggle-icon>🌙</span>
+          <span data-theme-toggle-label>Dark mode</span>
+        </button>
+      </div>
       <div class="auth-tabs">
         <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">Sign in</button>
         <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">Register</button>
@@ -104,6 +110,10 @@
       </div>
     </div>
     <div class="topbar-right">
+      <button class="btn btn-sm theme-toggle-btn" data-theme-toggle onclick="theme.toggle()" type="button">
+        <span data-theme-toggle-icon>🌙</span>
+        <span data-theme-toggle-label>Dark mode</span>
+      </button>
       <button class="bell-btn" onclick="nav.go('alerts')" title="Low-stock alerts">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -463,6 +473,7 @@
 // ── BOOTSTRAP ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   modal.init();
+  theme.init();
 
   // Hide both shells during auth bootstrap to prevent screen flicker
   const authScreen = document.getElementById('auth-screen');

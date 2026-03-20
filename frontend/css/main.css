@@ -32,7 +32,45 @@
   --shadow:      0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
   --font:        'IBM Plex Sans', -apple-system, sans-serif;
   --mono:        'IBM Plex Mono', 'Menlo', monospace;
+  --white:       #FFFFFF;
+  --focus-ring:  rgba(29,158,117,0.1);
+  --role-admin-bg: #EEEDFE;
+  --role-admin-text: #26215C;
+  --status-success-bdr: #9FE1CB;
+  --status-info-bdr: #B5D4F4;
+  --modal-overlay: rgba(10,20,16,0.4);
 }
+
+[data-theme='dark'] {
+  --bg:          #0F1613;
+  --surface:     #17201C;
+  --surface2:    #1B2621;
+  --surface3:    #223029;
+  --border:      #2B3A33;
+  --border2:     #365047;
+  --text:        #E5F0EB;
+  --text2:       #C2D4CC;
+  --text3:       #8EA89D;
+  --brand-mid:   #62C8A6;
+  --brand-light: #1B3A31;
+  --brand-faint: #1A2D26;
+  --danger-bg:   #3A1D1D;
+  --danger-bdr:  #6D3131;
+  --warning-bg:  #3C2E18;
+  --warning-bdr: #7F6132;
+  --success-bg:  #1B3A31;
+  --info-bg:     #1A3046;
+  --role-admin-bg: #2D2B4A;
+  --role-admin-text: #D8D5FF;
+  --status-success-bdr: #2D7A62;
+  --status-info-bdr: #3F6F9C;
+  --shadow-sm:   0 1px 2px rgba(0,0,0,0.45);
+  --shadow:      0 1px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+  --modal-overlay: rgba(0,0,0,0.55);
+}
+
+[data-theme='light'] { color-scheme: light; }
+[data-theme='dark'] { color-scheme: dark; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -142,6 +180,17 @@ input, select, textarea, button {
   border-radius: var(--radius-lg);
   padding: 28px;
   box-shadow: var(--shadow);
+}
+
+.auth-card-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.theme-toggle-btn {
+  min-width: 108px;
+  justify-content: center;
 }
 
 .auth-tabs {
@@ -285,7 +334,7 @@ input, select, textarea, button {
   border-radius: 999px;
   font-size: 9px;
   font-weight: 600;
-  color: #fff;
+  color: var(--white);
   display: flex; align-items: center; justify-content: center;
   padding: 0 3px;
 }
@@ -305,7 +354,7 @@ input, select, textarea, button {
   width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--brand);
-  color: #fff;
+  color: var(--white);
   font-size: 10px;
   font-weight: 600;
   display: flex; align-items: center; justify-content: center;
@@ -316,8 +365,8 @@ input, select, textarea, button {
 .user-pill-role {
   padding: 2px 8px;
   border-radius: 999px;
-  background: #EEEDFE;
-  color: #26215C;
+  background: var(--role-admin-bg);
+  color: var(--role-admin-text);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
@@ -490,9 +539,9 @@ input, select, textarea, button {
 }
 
 .toast.success { background: var(--brand-dark); color: #fff; }
-.toast.error   { background: var(--danger); color: #fff; }
-.toast.info    { background: var(--text); color: #fff; }
-.toast.warning { background: var(--warning); color: #fff; }
+.toast.error   { background: var(--danger); color: var(--white); }
+.toast.info    { background: var(--text); color: var(--white); }
+.toast.warning { background: var(--warning); color: var(--white); }
 
 @keyframes toast-in {
   from { transform: translateX(120%); opacity: 0; }
@@ -503,7 +552,7 @@ input, select, textarea, button {
 #modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10,20,16,0.4);
+  background: var(--modal-overlay);
   z-index: 200;
   display: none;
   align-items: center;
