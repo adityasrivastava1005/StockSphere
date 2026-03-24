@@ -21,7 +21,7 @@ from controllers.transaction_controller import get_all as txns_get_all, record_i
 from controllers.report_controller import get_dashboard, get_alerts, get_valuation, get_ledger, get_aging, get_audit, get_users, toggle_user, delete_user
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-PORT = 8000
+PORT = int(os.environ.get('PORT', 8000))
 
 
 class StockSphereHandler(BaseHTTPRequestHandler):
