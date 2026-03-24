@@ -1,11 +1,18 @@
 import os
-import psycopg
-from psycopg.rows import dict_row
+import sqlite3
 import hashlib
 from datetime import datetime, timedelta
 
-# Fetch the database URL from Render's environment variables
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except Exception:
+    psycopg = None
+    dict_row = None
+
 DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRES = bool(DATABASE_URL and psycopg)
+SQLITE_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'stocksphere.db')
 
 class CursorPolyfill:
     """Wraps the Postgres cursor to act like SQLite so controllers don't need rewriting."""
@@ -52,86 +59,164 @@ class CursorPolyfill:
     def lastrowid(self): return self._lastrowid
 
 class ConnPolyfill:
-    def __init__(self, conn): self.conn = conn
-    def execute(self, query, params=None): return self.cursor().execute(query, params)
-    def commit(self): self.conn.commit()
-    def close(self): self.conn.close()
-    def cursor(self): return CursorPolyfill(self.conn.cursor())
+    def __init__(self, conn, engine):
+        self.conn = conn
+        self.engine = engine
+
+    def execute(self, query, params=None):
+        cur = self.cursor()
+        if params is None:
+            return cur.execute(query)
+        return cur.execute(query, params)
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+    def cursor(self):
+        raw = self.conn.cursor()
+        if self.engine == 'postgres':
+            return CursorPolyfill(raw)
+        return raw
+
+
+def _sqlite_conn():
+    os.makedirs(os.path.dirname(SQLITE_PATH), exist_ok=True)
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA foreign_keys = ON')
+    return conn
 
 def get_conn():
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL environment variable is not set!")
-    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
-    return ConnPolyfill(conn)
+    if USE_POSTGRES:
+        conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+        return ConnPolyfill(conn, 'postgres')
+    return ConnPolyfill(_sqlite_conn(), 'sqlite')
 
 def hash_password(password):
     salt = "stocksphere_salt_v1"
     return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
 
 def init_db():
-    if not DATABASE_URL:
-        print("Skipping DB Init: DATABASE_URL not set.")
-        return
-    
     conn = get_conn()
-    c = conn.cursor()
-    # Postgres schema updates (SERIAL instead of AUTOINCREMENT, TIMESTAMP etc.)
-    c.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('admin','manager','staff','finance')),
-            is_active INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS products (
-            id SERIAL PRIMARY KEY,
-            sku TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            unit TEXT NOT NULL DEFAULT 'pcs',
-            current_stock INTEGER DEFAULT 0,
-            reorder_level INTEGER NOT NULL DEFAULT 10,
-            unit_price REAL NOT NULL DEFAULT 0,
-            opening_stock INTEGER DEFAULT 0,
-            total_in INTEGER DEFAULT 0,
-            total_out INTEGER DEFAULT 0,
-            supplier TEXT DEFAULT '',
-            is_active INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS transactions (
-            id SERIAL PRIMARY KEY,
-            txn_type TEXT NOT NULL CHECK(txn_type IN ('INWARD','OUTWARD','RETURN','ADJUSTMENT')),
-            product_id INTEGER NOT NULL REFERENCES products(id),
-            quantity INTEGER NOT NULL CHECK(quantity > 0),
-            party TEXT NOT NULL,
-            unit_price REAL,
-            reason TEXT,
-            remarks TEXT,
-            txn_date TEXT NOT NULL,
-            user_id INTEGER NOT NULL REFERENCES users(id),
-            username TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS audit_logs (
-            id SERIAL PRIMARY KEY,
-            action TEXT NOT NULL,
-            entity TEXT NOT NULL,
-            detail TEXT NOT NULL,
-            user_id INTEGER,
-            username TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS sessions (
-            token TEXT PRIMARY KEY,
-            user_id INTEGER NOT NULL,
-            expires_at TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
+    if USE_POSTGRES:
+        c = conn.cursor()
+        c.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('admin','manager','staff','finance')),
+                is_active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                sku TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                unit TEXT NOT NULL DEFAULT 'pcs',
+                current_stock INTEGER DEFAULT 0,
+                reorder_level INTEGER NOT NULL DEFAULT 10,
+                unit_price REAL NOT NULL DEFAULT 0,
+                opening_stock INTEGER DEFAULT 0,
+                total_in INTEGER DEFAULT 0,
+                total_out INTEGER DEFAULT 0,
+                supplier TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS transactions (
+                id SERIAL PRIMARY KEY,
+                txn_type TEXT NOT NULL CHECK(txn_type IN ('INWARD','OUTWARD','RETURN','ADJUSTMENT')),
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                quantity INTEGER NOT NULL CHECK(quantity > 0),
+                party TEXT NOT NULL,
+                unit_price REAL,
+                reason TEXT,
+                remarks TEXT,
+                txn_date TEXT NOT NULL,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                username TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id SERIAL PRIMARY KEY,
+                action TEXT NOT NULL,
+                entity TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                user_id INTEGER,
+                username TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS sessions (
+                token TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                expires_at TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+    else:
+        conn.conn.executescript("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('admin','manager','staff','finance')),
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sku TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                unit TEXT NOT NULL DEFAULT 'pcs',
+                current_stock INTEGER DEFAULT 0,
+                reorder_level INTEGER NOT NULL DEFAULT 10,
+                unit_price REAL NOT NULL DEFAULT 0,
+                opening_stock INTEGER DEFAULT 0,
+                total_in INTEGER DEFAULT 0,
+                total_out INTEGER DEFAULT 0,
+                supplier TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                txn_type TEXT NOT NULL CHECK(txn_type IN ('INWARD','OUTWARD','RETURN','ADJUSTMENT')),
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                quantity INTEGER NOT NULL CHECK(quantity > 0),
+                party TEXT NOT NULL,
+                unit_price REAL,
+                reason TEXT,
+                remarks TEXT,
+                txn_date TEXT NOT NULL,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                username TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT NOT NULL,
+                entity TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                user_id INTEGER,
+                username TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS sessions (
+                token TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                expires_at TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
     conn.commit()
     _seed(conn)
     conn.close()
