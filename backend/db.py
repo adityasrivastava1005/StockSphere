@@ -1,37 +1,93 @@
-import sqlite3
-import hashlib
 import os
+import psycopg
+from psycopg.rows import dict_row
+import hashlib
 from datetime import datetime, timedelta
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'stocksphere.db')
+# Fetch the database URL from Render's environment variables
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+class CursorPolyfill:
+    """Wraps the Postgres cursor to act like SQLite so controllers don't need rewriting."""
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self._lastrowid = None
+
+    def execute(self, query, params=None):
+        # 1. Replace SQLite '?' with Postgres '%s'
+        q = query.replace('?', '%s')
+        
+        # 2. Append RETURNING id for inserts (to polyfill SQLite's lastrowid)
+        is_insert = q.strip().upper().startswith("INSERT")
+        if is_insert and "RETURNING" not in q.upper():
+            if "INTO sessions" not in q and "INTO SESSIONS" not in q:
+                q += " RETURNING id"
+        
+        # 3. Execute query
+        if params:
+            self.cursor.execute(q, params)
+        else:
+            self.cursor.execute(q)
+        
+        # 4. Capture the returned ID
+        if is_insert and "RETURNING id" in q:
+            try:
+                res = self.cursor.fetchone()
+                if res and 'id' in res:
+                    self._lastrowid = res['id']
+            except Exception:
+                pass
+        
+        return self
+
+    def executemany(self, query, params_seq):
+        q = query.replace('?', '%s')
+        self.cursor.executemany(q, params_seq)
+        return self
+
+    def fetchone(self): return self.cursor.fetchone()
+    def fetchall(self): return self.cursor.fetchall()
+    
+    @property
+    def lastrowid(self): return self._lastrowid
+
+class ConnPolyfill:
+    def __init__(self, conn): self.conn = conn
+    def execute(self, query, params=None): return self.cursor().execute(query, params)
+    def commit(self): self.conn.commit()
+    def close(self): self.conn.close()
+    def cursor(self): return CursorPolyfill(self.conn.cursor())
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL environment variable is not set!")
+    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    return ConnPolyfill(conn)
 
 def hash_password(password):
     salt = "stocksphere_salt_v1"
     return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    if not DATABASE_URL:
+        print("Skipping DB Init: DATABASE_URL not set.")
+        return
+    
     conn = get_conn()
     c = conn.cursor()
-    c.executescript("""
+    # Postgres schema updates (SERIAL instead of AUTOINCREMENT, TIMESTAMP etc.)
+    c.cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('admin','manager','staff','finance')),
             is_active INTEGER DEFAULT 1,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             sku TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
             category TEXT NOT NULL,
@@ -44,10 +100,10 @@ def init_db():
             total_out INTEGER DEFAULT 0,
             supplier TEXT DEFAULT '',
             is_active INTEGER DEFAULT 1,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             txn_type TEXT NOT NULL CHECK(txn_type IN ('INWARD','OUTWARD','RETURN','ADJUSTMENT')),
             product_id INTEGER NOT NULL REFERENCES products(id),
             quantity INTEGER NOT NULL CHECK(quantity > 0),
@@ -58,22 +114,22 @@ def init_db():
             txn_date TEXT NOT NULL,
             user_id INTEGER NOT NULL REFERENCES users(id),
             username TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             action TEXT NOT NULL,
             entity TEXT NOT NULL,
             detail TEXT NOT NULL,
             user_id INTEGER,
             username TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS sessions (
             token TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL,
             expires_at TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
     conn.commit()
@@ -82,7 +138,10 @@ def init_db():
 
 def _seed(conn):
     c = conn.cursor()
-    if c.execute("SELECT COUNT(*) FROM users").fetchone()[0] > 0:
+    
+    # Check if already seeded 
+    c.execute("SELECT COUNT(*) as count FROM users")
+    if c.fetchone()['count'] > 0:
         return
 
     users = [
@@ -95,7 +154,8 @@ def _seed(conn):
     c.executemany("INSERT INTO users(name,username,password,role) VALUES(?,?,?,?)", users)
     conn.commit()
 
-    uid = {row[0]: row[1] for row in c.execute("SELECT username, id FROM users").fetchall()}
+    c.execute("SELECT username, id FROM users")
+    uid = {row['username']: row['id'] for row in c.fetchall()}
 
     products = [
         ('ELEC-001','Circuit Board A3',   'Electronics',  'pcs',   340, 50,  480, 300,100, 60,'ABC Distributors'),
@@ -114,7 +174,6 @@ def _seed(conn):
     conn.commit()
 
     today = datetime.now()
-    # (txn_type, product_id, qty, party, unit_price, reason, days_ago, username)
     txns_raw = [
         ('INWARD',  1,100,'ABC Distributors',  480,'Purchase Order',15,'admin'),
         ('INWARD',  3,400,'Sharma Enterprises', 45,'Purchase Order',12,'rahul'),
@@ -133,7 +192,7 @@ def _seed(conn):
         txn_date = (today - timedelta(days=days_ago)).strftime('%Y-%m-%d')
         c.execute("""INSERT INTO transactions(txn_type,product_id,quantity,party,unit_price,
             reason,txn_date,username,user_id) VALUES(?,?,?,?,?,?,?,?,?)""",
-            (txn_type, product_id, qty, party, price, reason, txn_date, uname, uid[uname]))
+            (txn_type, product_id, qty, party, price, reason, txn_date, uname, uid.get(uname)))
 
     audit_entries = [
         ('USER_LOGIN',      'admin',           'User admin signed in',                      'admin', 'admin'),
@@ -153,4 +212,3 @@ def _seed(conn):
 
 if __name__ == '__main__':
     init_db()
-    print("DB initialized at", DB_PATH)
