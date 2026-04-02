@@ -1,16 +1,5 @@
 // ui.js — shared utilities: API, toast, modal, navigation, helpers
-const isBackendSameOrigin =
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-  window.location.port === '8000';
-
-const API_BASE_CANDIDATES = (() => {
-  if (isBackendSameOrigin) return [''];
-  const candidates = [
-    'http://127.0.0.1:8000',
-    'http://localhost:8000',
-  ];
-  return [...new Set(candidates)];
-})();
+const API_BASE_CANDIDATES = [''];
 
 // ── API CLIENT ────────────────────────────────────────────────────────
 const api = {
