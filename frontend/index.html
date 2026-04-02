@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockSphere — Inventory Management</title>
+<link rel="stylesheet" href="css/main.css?v=20260318">
+<link rel="stylesheet" href="css/components.css?v=20260318">
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ──────────────────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      <div class="auth-logo">
+        <div class="auth-logo-mark"></div>
+        <span class="auth-logo-name">StockSphere</span>
+      </div>
+      <p class="auth-tagline">Centralised inventory management for your organisation. Real-time stock tracking, alerts, and reporting.</p>
+      <div class="auth-features">
+        <div class="auth-feature"><div class="auth-feature-dot"></div>Real-time inward / outward tracking</div>
+        <div class="auth-feature"><div class="auth-feature-dot"></div>Automatic low-stock alerts</div>
+        <div class="auth-feature"><div class="auth-feature-dot"></div>Category valuation and ledger reports</div>
+        <div class="auth-feature"><div class="auth-feature-dot"></div>Full immutable audit trail</div>
+        <div class="auth-feature"><div class="auth-feature-dot"></div>Role-based access control</div>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <button class="btn btn-sm theme-toggle-btn" data-theme-toggle onclick="theme.toggle()" type="button">
+          <span data-theme-toggle-icon>🌙</span>
+          <span data-theme-toggle-label>Dark mode</span>
+        </button>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">Sign in</button>
+        <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">Register</button>
+      </div>
+
+      <!-- Login -->
+      <div id="login-panel">
+        <div class="form-group" style="margin-bottom:13px">
+          <label class="form-label">Username</label>
+          <input class="form-input" id="login-username" placeholder="Enter username" autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
+          <label class="show-password-toggle">
+            <input type="checkbox" onchange="togglePasswordField('login-password', this.checked)">
+            Show password
+          </label>
+        </div>
+        <div class="error-bar" id="login-err"></div>
+        <button class="btn btn-primary btn-block" id="login-btn" onclick="handleLogin()" style="margin-top:14px">Sign in</button>
+      </div>
+
+      <!-- Register -->
+      <div id="register-panel" class="hidden">
+        <div class="form-group" style="margin-bottom:13px">
+          <label class="form-label">Full name</label>
+          <input class="form-input" id="reg-name" placeholder="Your full name">
+        </div>
+        <div class="form-group" style="margin-bottom:13px">
+          <label class="form-label">Username</label>
+          <input class="form-input" id="reg-username" placeholder="Choose a username">
+        </div>
+        <div class="form-group" style="margin-bottom:13px">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="reg-password" placeholder="At least 6 characters">
+          <label class="show-password-toggle">
+            <input type="checkbox" onchange="togglePasswordField('reg-password', this.checked)">
+            Show password
+          </label>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label">Role</label>
+          <select class="form-select" id="reg-role">
+            <option value="staff">Inventory Staff</option>
+            <option value="manager">Manager</option>
+            <option value="finance">Finance</option>
+          </select>
+        </div>
+        <div class="error-bar" id="reg-err"></div>
+        <button class="btn btn-primary btn-block" id="reg-btn" onclick="handleRegister()" style="margin-top:14px">Create account</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SCREEN ────────────────────────────────────────────────── -->
+<div id="app-screen">
+
+  <!-- Topbar -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <button id="sidebar-toggle-btn" class="bell-btn" onclick="toggleSidebar()" title="Collapse sidebar" aria-label="Collapse sidebar" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="topbar-logo">
+        <div class="topbar-logo-mark"></div>
+        StockSphere
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-sm theme-toggle-btn" data-theme-toggle onclick="theme.toggle()" type="button">
+        <span data-theme-toggle-icon>🌙</span>
+        <span data-theme-toggle-label>Dark mode</span>
+      </button>
+      <button class="bell-btn" onclick="nav.go('alerts')" title="Low-stock alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <div id="bell-count" class="bell-count hidden">0</div>
+      </button>
+      <div class="user-pill">
+        <div class="user-pill-avatar" id="tb-avatar">A</div>
+        <span class="user-pill-name" id="tb-name">User</span>
+        <span class="user-pill-role" id="tb-role">Role</span>
+      </div>
+      <button class="btn btn-sm" onclick="auth.openChangeUsername()">Change username</button>
+      <button class="btn btn-sm" onclick="auth.openChangePassword()">Change password</button>
+      <button class="btn btn-sm" onclick="auth.logout()">Sign out</button>
+    </div>
+  </header>
+
+  <div id="main-layout">
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <div class="nav-group-label">Overview</div>
+      <div class="nav-item" data-page="dashboard" onclick="nav.go('dashboard')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </span>
+        Dashboard
+      </div>
+
+      <div class="nav-group-label">Inventory</div>
+      <div class="nav-item" data-page="products" onclick="nav.go('products')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+        </span>
+        Products
+      </div>
+      <div class="nav-item" data-page="inward" onclick="nav.go('inward')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
+          </svg>
+        </span>
+        Stock Inward
+      </div>
+      <div class="nav-item" data-page="outward" onclick="nav.go('outward')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 7 12 3 8 7"/><line x1="12" y1="21" x2="12" y2="3"/>
+            <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
+          </svg>
+        </span>
+        Stock Outward
+      </div>
+      <div class="nav-item" data-page="transactions" onclick="nav.go('transactions')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <circle cx="4" cy="6" r="1"/>
+            <circle cx="4" cy="12" r="1"/>
+            <circle cx="4" cy="18" r="1"/>
+          </svg>
+        </span>
+        Transactions
+      </div>
+      <div class="nav-item" data-page="alerts" onclick="nav.go('alerts')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
+        Alerts
+        <span id="nav-alert-badge" class="nav-badge hidden">0</span>
+      </div>
+
+      <div class="nav-group-label">Reports</div>
+      <div class="nav-item" data-page="reports" onclick="nav.go('reports')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </span>
+        Reports
+      </div>
+      <div class="nav-item" data-page="audit" onclick="nav.go('audit')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </span>
+        Audit Trail
+      </div>
+
+      <div class="nav-group-label nav-admin-only">Admin</div>
+      <div class="nav-item nav-admin-only" data-page="users" onclick="nav.go('users')">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        Users
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main id="content">
+
+      <!-- Dashboard -->
+      <div class="page" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub">Real-time inventory overview</div>
+          </div>
+          <div id="dash-date" style="font-size:12px;color:var(--text3)"></div>
+        </div>
+        <div id="dash-status"></div>
+        <div class="metrics-row">
+          <div class="metric-tile">
+            <div class="metric-label">Total SKUs</div>
+            <div class="metric-value" id="m-skus">—</div>
+            <div class="metric-delta">Active products</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Inventory value</div>
+            <div class="metric-value" id="m-value">—</div>
+            <div class="metric-delta">At current stock</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Transactions</div>
+            <div class="metric-value" id="m-txns">—</div>
+            <div class="metric-delta">Total recorded</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Low stock</div>
+            <div class="metric-value" id="m-low">—</div>
+            <div class="metric-delta">Need attention</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Transaction volume — last 7 days</div></div>
+            <div class="chart-bars" id="dash-chart"></div>
+            <div class="chart-labels" id="dash-chart-labels"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Stock level by category</div></div>
+            <div id="dash-categories"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent transactions</div>
+            <button class="btn btn-sm" onclick="nav.go('transactions')">View all</button>
+          </div>
+          <div id="dash-recent"></div>
+        </div>
+      </div>
+
+      <!-- Transactions History -->
+      <div class="page" id="page-transactions">
+        <div class="page-header">
+          <div><div class="page-title">Transactions History</div><div class="page-sub">All inward and outward records</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="search-row">
+              <input class="search-input" id="tx-search" placeholder="Search product, SKU, party, or user…" oninput="inventory.renderTransactions()">
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Txn ID</th><th>Product</th><th>Type</th><th>Qty</th><th>Party</th><th>Reason</th><th>Date</th><th>Recorded by</th></tr></thead>
+              <tbody id="transactions-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div class="page" id="page-products">
+        <div class="page-header">
+          <div><div class="page-title">Products</div><div class="page-sub">Master catalogue</div></div>
+          <div class="page-actions">
+            <button class="btn btn-primary" onclick="inventory.openAddProduct()" id="btn-add-product">+ Add product</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="search-row">
+              <input class="search-input" id="prod-search" placeholder="Search name or SKU…" oninput="inventory.renderProducts()">
+              <select class="form-select" id="prod-cat-filter" style="width:160px" onchange="inventory.renderProducts()">
+                <option value="">All categories</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Unit</th><th>Stock</th><th>Reorder</th><th>Unit price</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="products-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock Inward -->
+      <div class="page" id="page-inward">
+        <div class="page-header">
+          <div><div class="page-title">Stock Inward</div><div class="page-sub">Record incoming stock</div></div>
+          <div class="page-actions">
+            <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="inventory.clearTransactions('INWARD')">Clear history</button>
+            <button class="btn btn-primary" onclick="inventory.openInward()">+ Record inward</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="search-row">
+              <input class="search-input" id="inward-search" placeholder="Search product or supplier…" oninput="inventory.renderInward()">
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Txn ID</th><th>Product</th><th>Supplier</th><th>Qty</th><th>Unit price</th><th>Total</th><th>Date</th><th>Recorded by</th></tr></thead>
+              <tbody id="inward-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock Outward -->
+      <div class="page" id="page-outward">
+        <div class="page-header">
+          <div><div class="page-title">Stock Outward</div><div class="page-sub">Record stock dispatch</div></div>
+          <div class="page-actions">
+            <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="inventory.clearTransactions('OUTWARD')">Clear history</button>
+            <button class="btn btn-primary" onclick="inventory.openOutward()">+ Record outward</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="search-row">
+              <input class="search-input" id="outward-search" placeholder="Search product or party…" oninput="inventory.renderOutward()">
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Txn ID</th><th>Product</th><th>Issued to</th><th>Qty</th><th>Reason</th><th>Date</th><th>Recorded by</th></tr></thead>
+              <tbody id="outward-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="page" id="page-alerts">
+        <div class="page-header">
+          <div><div class="page-title">Low Stock Alerts</div><div class="page-sub">Products at or below reorder threshold</div></div>
+        </div>
+        <div id="alerts-container" style="display:flex;flex-direction:column;gap:11px"></div>
+      </div>
+
+      <!-- Reports -->
+      <div class="page" id="page-reports">
+        <div class="page-header">
+          <div><div class="page-title">Reports</div><div class="page-sub">Inventory analytics and valuation</div></div>
+          <div class="page-actions">
+            <button class="btn btn-sm" onclick="reports.exportCSV()">⬇ Export CSV</button>
+          </div>
+        </div>
+        <div class="three-col">
+          <div class="metric-tile"><div class="metric-label">Total products</div><div class="metric-value" id="r-products">—</div></div>
+          <div class="metric-tile"><div class="metric-label">Total stock value</div><div class="metric-value" id="r-value">—</div></div>
+          <div class="metric-tile"><div class="metric-label">Low stock items</div><div class="metric-value danger" id="r-low">—</div></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Category valuation</div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Category</th><th>Items</th><th>Total qty</th><th>Value (₹)</th></tr></thead>
+                <tbody id="valuation-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Inventory aging — stock ratio</div></div>
+            <div id="aging-list" style="display:flex;flex-direction:column;gap:12px"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Full stock ledger</div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Opening</th><th>Total in</th><th>Total out</th><th>Closing</th><th>Unit price</th><th>Valuation</th></tr></thead>
+              <tbody id="ledger-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Trail -->
+      <div class="page" id="page-audit">
+        <div class="page-header">
+          <div><div class="page-title">Audit Trail</div><div class="page-sub">All system events, immutable log</div></div>
+          <div class="page-actions">
+            <input class="search-input" id="audit-search" placeholder="Search logs…" oninput="reports.renderAudit()">
+          </div>
+        </div>
+        <div class="card">
+          <div id="audit-container"></div>
+        </div>
+      </div>
+
+      <!-- Users (admin only) -->
+      <div class="page" id="page-users">
+        <div class="page-header">
+          <div><div class="page-title">User Management</div><div class="page-sub">Manage accounts and roles</div></div>
+          <div class="page-actions">
+            <button class="btn btn-primary" onclick="reports.openAddUser()">+ Add user</button>
+          </div>
+        </div>
+        <div class="user-grid" id="users-grid"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal overlay -->
+<div id="modal-overlay">
+  <div id="modal-container"></div>
+</div>
+
+<!-- Toast stack -->
+<div id="toast-stack"></div>
+
+<script src="js/ui.js?v=20260403"></script>
+<script src="js/auth.js?v=20260403"></script>
+<script src="js/dashboard.js?v=20260403"></script>
+<script src="js/inventory.js?v=20260403"></script>
+<script src="js/reports.js?v=20260403"></script>
+<script>
+// ── BOOTSTRAP ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  modal.init();
+  theme.init();
+
+  // Hide both shells during auth bootstrap to prevent screen flicker
+  const authScreen = document.getElementById('auth-screen');
+  const appScreen = document.getElementById('app-screen');
+  authScreen.style.display = 'none';
+  appScreen.style.display = 'none';
+
+  // Date in topbar
+  const dateEl = document.getElementById('dash-date');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-IN', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  // Restore session
+  const ok = await auth.init();
+  if (ok) {
+    showAppScreen();
+  } else {
+    showAuthScreen();
+  }
+
+  // Role-gate add product button
+  document.getElementById('btn-add-product')?.classList.toggle('hidden', !auth.can('staff'));
+});
+</script>
+</body>
+</html>
