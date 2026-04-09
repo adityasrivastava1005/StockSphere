@@ -4,6 +4,10 @@ const inventory = {
 
   // ── PRODUCTS ──────────────────────────────────────────────────────
   async renderProducts() {
+    const canEdit = auth.can('staff');
+    const addBtn = document.getElementById('btn-add-product');
+    if (addBtn) addBtn.classList.toggle('hidden', !canEdit);
+
     const search = document.getElementById('prod-search')?.value || '';
     const cat    = document.getElementById('prod-cat-filter')?.value || '';
     let url = '/api/products?';
@@ -28,11 +32,15 @@ const inventory = {
 
     const tbody = document.getElementById('products-tbody');
     if (!products.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty" style="padding:32px">No products found</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="9" class="empty" style="padding:32px">
+        <div class="empty-text" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <span>No products found</span>
+          ${canEdit ? '<button class="btn btn-sm btn-primary" onclick="inventory.openAddProduct()">+ Add product</button>' : ''}
+        </div>
+      </td></tr>`;
       return;
     }
 
-    const canEdit = auth.can('staff');
     tbody.innerHTML = products.map(p => {
       const isLow  = p.current_stock <= p.reorder_level;
       const isCrit = p.current_stock < p.reorder_level / 2;
@@ -55,6 +63,11 @@ const inventory = {
   },
 
   openAddProduct() {
+    if (!auth.can('staff')) {
+      toast('You do not have permission to add products.', 'error');
+      return;
+    }
+
     modal.open(`
       <div class="modal">
         <div class="modal-title">Register product</div>
