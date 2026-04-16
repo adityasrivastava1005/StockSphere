@@ -48,7 +48,13 @@ cd stocksphere/backend
 python server.py
 ```
 
-Then open: **http://localhost:8000**
+The server will bind to an available port and print the exact URL after startup.
+
+If you want to force a specific port, set `PORT` before launching:
+
+```bash
+PORT=8000 python server.py
+```
 
 ## Demo accounts
 

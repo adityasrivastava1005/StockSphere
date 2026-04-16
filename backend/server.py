@@ -1,7 +1,7 @@
 """
 StockSphere — Backend Server
 Pure Python stdlib, no external dependencies.
-REST API on port 8000, serves frontend from /frontend/
+REST API on a runtime-selected port, serves frontend from /frontend/
 """
 
 import sys, os, json, re
@@ -20,7 +20,7 @@ from controllers.transaction_controller import get_all as txns_get_all, record_i
 from controllers.report_controller import get_dashboard, get_alerts, get_valuation, get_ledger, get_aging, get_audit, get_users, toggle_user, delete_user
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-PORT = 8000
+PORT = int(os.environ.get('PORT', '0'))
 
 
 class StockSphereHandler(BaseHTTPRequestHandler):
@@ -309,9 +309,10 @@ class StockSphereHandler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     print("Initializing StockSphere database...")
     init_db()
-    print(f"Starting server on http://localhost:{PORT}")
     print("Press Ctrl+C to stop.\n")
     server = HTTPServer(('0.0.0.0', PORT), StockSphereHandler)
+    actual_port = server.server_address[1]
+    print(f"Starting server on http://localhost:{actual_port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
