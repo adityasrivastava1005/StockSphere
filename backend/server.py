@@ -12,7 +12,7 @@ import mimetypes
 # Add backend dir to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from db import init_db, get_conn
+from db import init_db, get_conn, get_app_settings
 from middleware.auth import verify_token, has_role
 from controllers.auth_controller import login, register, logout, change_password, change_username
 from controllers.product_controller import get_all as products_get_all, get_categories, create as product_create, update as product_update, deactivate as product_deactivate
@@ -132,8 +132,12 @@ class StockSphereHandler(BaseHTTPRequestHandler):
         self._handle_delete_api(path, params)
 
     def _handle_get_api(self, path, params):
+        if path == '/api/app/settings':
+            status, data = get_app_settings()
+            self._json(status, data)
+
         # Auth
-        if path == '/api/auth/me':
+        elif path == '/api/auth/me':
             user = self._require_auth()
             if user:
                 self._json(200, user)

@@ -110,6 +110,7 @@
       </div>
     </div>
     <div class="topbar-right">
+      <div id="app-status-badge" class="status-badge">StockSphere • v1.1.0 • Demo</div>
       <button class="btn btn-sm theme-toggle-btn" data-theme-toggle onclick="theme.toggle()" type="button">
         <span data-theme-toggle-icon>🌙</span>
         <span data-theme-toggle-label>Dark mode</span>
@@ -474,12 +475,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
   modal.init();
   theme.init();
+  app.renderStatus();
 
   // Hide both shells during auth bootstrap to prevent screen flicker
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app-screen');
   authScreen.style.display = 'none';
   appScreen.style.display = 'none';
+
+  await app.loadSettings();
 
   // Date in topbar
   const dateEl = document.getElementById('dash-date');

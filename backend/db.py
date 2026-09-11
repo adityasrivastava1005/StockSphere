@@ -75,14 +75,44 @@ def init_db():
             expires_at TEXT NOT NULL,
             created_at TEXT DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS app_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            setting_key TEXT UNIQUE NOT NULL,
+            setting_value TEXT NOT NULL,
+            updated_at TEXT DEFAULT (datetime('now'))
+        );
     """)
     conn.commit()
     _seed(conn)
     conn.close()
 
+
+def get_app_settings():
+    conn = get_conn()
+    try:
+        rows = conn.execute("SELECT setting_key, setting_value FROM app_settings ORDER BY setting_key").fetchall()
+        data = {row['setting_key']: row['setting_value'] for row in rows}
+        return 200, data
+    finally:
+        conn.close()
+
 def _seed(conn):
     c = conn.cursor()
+
+    default_settings = [
+        ('app_name', 'StockSphere'),
+        ('app_version', 'v1.1.0'),
+        ('app_mode', 'Demo'),
+        ('app_tagline', 'Centralised inventory management')
+    ]
+    for key, value in default_settings:
+        c.execute(
+            "INSERT OR IGNORE INTO app_settings(setting_key, setting_value) VALUES(?, ?)",
+            (key, value)
+        )
+
     if c.execute("SELECT COUNT(*) FROM users").fetchone()[0] > 0:
+        conn.commit()
         return
 
     users = [
