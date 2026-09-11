@@ -4,13 +4,19 @@ Pure Python stdlib, no external dependencies.
 REST API on a runtime-selected port, serves frontend from /frontend/
 """
 
-import sys, os, json, re
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from __future__ import annotations
+
+import json
 import mimetypes
+import os
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 # Add backend dir to path
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import init_db, get_conn, get_app_settings
 from middleware.auth import verify_token, has_role
@@ -19,7 +25,7 @@ from controllers.product_controller import get_all as products_get_all, get_cate
 from controllers.transaction_controller import get_all as txns_get_all, record_inward, record_outward, clear_all as txns_clear_all
 from controllers.report_controller import get_dashboard, get_alerts, get_valuation, get_ledger, get_aging, get_audit, get_users, toggle_user, delete_user
 
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / 'frontend'
 PORT = int(os.environ.get('PORT', '0'))
 
 
@@ -73,14 +79,15 @@ class StockSphereHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _serve_file(self, path):
-        if not os.path.exists(path) or not os.path.isfile(path):
+        file_path = Path(path)
+        if not file_path.exists() or not file_path.is_file():
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b'Not found')
             return
-        mime, _ = mimetypes.guess_type(path)
+        mime, _ = mimetypes.guess_type(str(file_path))
         mime = mime or 'application/octet-stream'
-        with open(path, 'rb') as f:
+        with file_path.open('rb') as f:
             data = f.read()
         self.send_response(200)
         self.send_header('Content-Type', mime)
@@ -107,10 +114,10 @@ class StockSphereHandler(BaseHTTPRequestHandler):
         else:
             # Serve frontend files
             if path == '' or path == '/':
-                self._serve_file(os.path.join(FRONTEND_DIR, 'index.html'))
+                self._serve_file(FRONTEND_DIR / 'index.html')
             else:
                 rel = path.lstrip('/')
-                self._serve_file(os.path.join(FRONTEND_DIR, rel))
+                self._serve_file(FRONTEND_DIR / rel)
 
     def do_POST(self):
         parsed = urlparse(self.path)
