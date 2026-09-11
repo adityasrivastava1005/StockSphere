@@ -1,7 +1,8 @@
-import hashlib
-import os
+from __future__ import annotations
+
 import secrets
 from datetime import datetime, timedelta
+
 from db import get_conn
 
 SECRET = "stocksphere_jwt_secret_key_v1_2026"

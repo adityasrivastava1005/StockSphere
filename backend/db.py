@@ -1,12 +1,16 @@
-import sqlite3
+from __future__ import annotations
+
 import hashlib
 import os
+import sqlite3
 from datetime import datetime, timedelta
+from pathlib import Path
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'stocksphere.db')
+DB_PATH = Path(__file__).resolve().parent.parent / 'database' / 'stocksphere.db'
+
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -17,7 +21,7 @@ def hash_password(password):
     return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = get_conn()
     c = conn.cursor()
     c.executescript("""
