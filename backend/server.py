@@ -1,9 +1,3 @@
-"""
-StockSphere — Backend Server
-Pure Python stdlib, no external dependencies.
-REST API on port 8000, serves frontend from /frontend/
-"""
-
 import sys, os, json, re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
