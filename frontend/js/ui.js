@@ -258,8 +258,32 @@ function setLoading(containerId, msg = 'Loading...') {
 function handleApiError(res, fallback = 'Something went wrong.') {
   const msg = res.data?.error || fallback;
   toast(msg, 'error');
-  return msg;
 }
+
+const app = {
+  settings: {
+    app_name: 'StockSphere',
+    app_version: 'v1.1.0',
+    app_mode: 'Demo'
+  },
+
+  async loadSettings() {
+    const res = await api.get('/api/app/settings');
+    if (res.ok && res.data) {
+      this.settings = { ...this.settings, ...res.data };
+    }
+    this.renderStatus();
+  },
+
+  renderStatus() {
+    const badge = document.getElementById('app-status-badge');
+    if (!badge) return;
+    const name = this.settings.app_name || 'StockSphere';
+    const version = this.settings.app_version || 'v1.1.0';
+    const mode = this.settings.app_mode || 'Demo';
+    badge.textContent = `${name} • ${version} • ${mode}`;
+  }
+};
 
 // show / hide error bar inside a modal
 function showErr(id, msg) {
